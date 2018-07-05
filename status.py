@@ -1,33 +1,51 @@
 #!/usr/bin/python
+import cx_Oracle
+import datetime
+
 print "Content-Type: text/plain"
 print "refresh: 900"
 print
 
 # The items above provide html header information for rendering of the page to a web browser.
+stale_row_name = 'oldrow'
+no_data = 'noData'
+button_name = 'demo'
 
-import cx_Oracle
+currentDT = datetime.datetime.now()
 
-# Use these lengths for print alignment.
-coord_len = 20 # Database is set to 50
-coloc_len = 20 # Database is set to 50
-dev_len = 30  # Database is set to 50
-meas_len = 11 # Database is set to 4, word is 11 long
-date_len = 20 # To provide space for the date string without making it feel cramped
+print """<html>
+<head>
+<style>
+table, th, td {
+    border: 3px solid turquoise;
+    border-collapse:collapse;
+}
+</style>
+</head>
+<body>"""
+print "<table style=width:100%>"
+
 
 # Items that are relatively constant, the column list, and a delimiter list.
-header_line = ["Coordinator","Coordinator Location","Device","Measurement","Date/Time"]
-delimiting_line = [""]*5
+def header_print(headings):
+    for item in headings:
+        print("<th style=font-family:verdana;font-size:18px;>{}</th>".format(item))
+
+
+titles = ["Coordinator", "Coordinator Location", "Device", "Measurement", "Date/Time"]
+header_print(titles)
+
 
 # The print statement is of necessity long winded for this, as such it has been placed into a
 # function of it's own, note that the default fill is a space.
 # This uses the string manipulation mini-language, to allow for at least some level of presentation.
-def to_screen(print_line,fill = " "):
-	print "{0:{filler}<{width}}".format(print_line[0], filler = fill, width = coord_len)," ","{0:{filler}<{width}}".format(print_line[1], filler = fill, width = coloc_len)," ","{0:{filler}<{width}}".format(print_line[2], filler = fill, width = dev_len)," ","{0:{filler}<{width}}".format(print_line[3], filler = fill, width = meas_len)," ","{0:{filler}<{width}}".format(print_line[4], filler = fill, width = date_len)
+def print_row(print_line, id_tag=""):
+    print("<tr id={}>".format(id_tag))
+    for item in print_line:
+        print("<td>{}</td>".format(item))
+    print("</tr>")
 
-# Print the column headings and a delimiter.
-to_screen(header_line)
-to_screen(delimiting_line,"-")
-	
+
 # Connect to the database, note that REPORT can only see this view, and has nothing but SELECT abilities.
 connection = cx_Oracle.connect("REPORT", "$REPORT", "NDAHEMON")
 # Create a cursor to collate and read the data.
@@ -36,11 +54,96 @@ cursor = connection.cursor()
 cursor.execute("""SELECT * FROM REPORT_VIEW""")
 
 # Loop through the cursor entries, convert the datetime to a string for display and print the data.
-for entry in cursor:
-	entry = list(entry)
-	entry[4] = entry[4].strftime("%H:%M:%S %d-%m-%y")
-	to_screen(entry)
+entries = list(cursor)
 
-# Close out the items created.
+
+def date_to_string(date):
+    date = date.strftime("%H:%M:%S  %d-%m-%y")
+    return date
+
+
+def get_key(item):
+    return item[0]
+
+entries = sorted(entries, key=get_key, reverse=True)
+for entry in entries:
+    entry = list(entry)
+    start_delta = datetime.timedelta(weeks=1)
+    one_week_ago = currentDT - start_delta
+    is_old = one_week_ago > entry[4]
+    entry[4] = date_to_string(entry[4])
+
+    if entry[3] is None:
+        print_row(entry, no_data)
+    elif is_old:
+        print_row(entry, stale_row_name)
+    else:
+        print_row(entry)  # Close out the items created.
 cursor.close()
 connection.close()
+
+
+def search_id(id_to_search_for):
+    return "document.getElementById('{}')".format(id_to_search_for)
+
+
+def get_background_colour(id_to_search_for):
+    return search_id(id_to_search_for) + """.style.backgroundColor"""
+
+print """<script>
+window.onload=function myFunction() {
+    setInterval(function(){
+    if (""" + get_background_colour(stale_row_name) + """ ==='lightgrey') {
+    	""" + get_background_colour(stale_row_name) + """ ='white';
+    }
+    else {
+    	""" + get_background_colour(stale_row_name) + """ ='lightgrey';
+        
+    }}, 1000);
+               
+    setInterval(function(){ 
+    if (""" + get_background_colour(no_data) + """ ==='red'){
+    	""" + get_background_colour(no_data) + """ ='white';
+    }
+    else {
+    	""" + get_background_colour(no_data) + """ ='red';
+    
+    }}, 1000);       
+}
+
+</script>
+
+"""
+
+
+def change_display(id_to_search_for):
+    return search_id(id_to_search_for) + """.style.display"""
+
+
+def change_button_text(id_to_search_for):
+    return search_id(id_to_search_for) + """.innerHTML"""
+
+
+def show_hide(change):
+    return "Click to {} stale data".format(change)
+
+print """
+<button  id=""" + button_name + """ onclick='hideData()'>""" + show_hide('hide') + """</button>
+<script>
+
+function hideData(){
+    
+    if(""" + change_display(stale_row_name) + """ === '') {
+       	""" + change_display(stale_row_name) + """ = 'none';
+        """ + change_button_text(button_name) + """ = '""" + show_hide('show') + """';
+    }
+    else {   
+    	""" + change_display(stale_row_name) + """ = '';
+       
+        """ + change_button_text(button_name) + """ = '""" + show_hide('hide') + """';
+    }
+}
+</script>    
+</table>
+</body>
+</html>"""
