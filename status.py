@@ -3,7 +3,7 @@ import cx_Oracle
 import datetime
 from collections import OrderedDict
 
-print "Content-Type: text/plain"
+print "Content-Type: text/html"
 print "refresh: 900"
 print
 
@@ -16,6 +16,12 @@ currentDT = datetime.datetime.now()
 
 print """<html>
 <head>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js">  </script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js">   </script>
+
 <style>
 table, th, td {
     border: 3px solid turquoise;
@@ -44,11 +50,11 @@ up_link = link.format("Up")
 style = " style='width:5%; display:none;'"
 
 titles = OrderedDict()
-titles["coord"] = "Coordinator <img" + down_link + style + "' id='downcoord'><img" + up_link + style + " id='upcoord'>"
-titles["coordloc"] = "Coordinator Location <img" + down_link + style + "' id='downcoordloc'><img" + up_link + style + " id='upcoordloc'>"
-titles["dev"] = "Device <img" + down_link + style + "' id='downdev'><img" + up_link + style + " id='updev'>"
-titles["meas"] = "Measurement <img" + down_link + style + "' id='downmeas'><img" + up_link + style + " id='upmeas'>"
-titles["d_t"] = "Date/Time <img" + down_link + style + "' id='downd_t'><img" + up_link + style + " id='upd_t'>"
+titles["coord"] = "Coordinator <img" + down_link + style + " id='downcoord'><img" + up_link + style + " id='upcoord'>"
+titles["coordloc"] = "Coordinator Location <img" + down_link + style + " id='downcoordloc'><img" + up_link + style + " id='upcoordloc'>"
+titles["dev"] = "Device <img" + down_link + style + " id='downdev'><img" + up_link + style + " id='updev'>"
+titles["meas"] = "Measurement <img" + down_link + style + " id='downmeas'><img" + up_link + style + " id='upmeas'>"
+titles["d_t"] = "Date/Time <img" + down_link + style + " id='downd_t'><img" + up_link + style + " id='upd_t'>"
 
 header_print(titles)
 print"</thead>" \
@@ -58,8 +64,8 @@ print"</thead>" \
 # The print statement is of necessity long winded for this, as such it has been placed into a
 # function of it's own, note that the default fill is a space.
 # This uses the string manipulation mini-language, to allow for at least some level of presentation.
-def print_row(print_line, id_tag=""):
-    print("<tr id={}>".format(id_tag))
+def print_row(print_line, id_tag="", other_tags=""):
+    print("<tr {} id={}>".format(other_tags, id_tag))
     for item in print_line:
         print("<td>{}</td>".format(item))
     print("</tr>")
@@ -81,7 +87,7 @@ print"</tbody>"
 def get_key(item):
     return item[0]
 
-
+last_coord = ""
 entries = sorted(entries, key=get_key, reverse=True)
 for entry in entries:
     entry = list(entry)
@@ -89,12 +95,19 @@ for entry in entries:
     one_week_ago = currentDT - start_delta
     is_old = one_week_ago > entry[4]
 
-    if entry[3] is None:
-        print_row(entry, no_data)
-    elif is_old:
-        print_row(entry, stale_row_name)
+    last_word = entry[0].split()[-1]
+    if last_coord != entry[0]:
+        other_tags = "data-toggle='collapse' style=cursor:pointer data-target='.{}'".format(last_word)
     else:
-        print_row(entry)  # Close out the items created.
+        other_tags = "class='{} collapse in'".format(last_word)
+
+    if entry[3] is None:
+        print_row(entry, no_data, other_tags)
+    elif is_old:
+        print_row(entry, stale_row_name, other_tags)
+    else:
+        print_row(entry, other_tags = other_tags)  # Close out the items created.
+    last_coord = entry[0]
 cursor.close()
 connection.close()
 
@@ -181,7 +194,7 @@ def show_hide(change):
 
 
 print """
-<button  id=""" + button_name + """ onclick='hideData()'>""" + show_hide('hide') + """</button>
+<button  id=""" + button_name + """ onclick='hideData()' style=cursor:pointer>""" + show_hide('hide') + """</button>
 <script>
 
 function hideData(){
