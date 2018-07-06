@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import cx_Oracle
 import datetime
+from collections import OrderedDict
 
 print "Content-Type: text/plain"
 print "refresh: 900"
@@ -22,17 +23,29 @@ table, th, td {
 }
 </style>
 </head>
+<script src="https://www.w3schools.com/lib/w3.js"></script>
 <body>"""
-print "<table style=width:100%>"
+print "<table id='myTable' style=width:100%>"
 
 
 # Items that are relatively constant, the column list, and a delimiter list.
 def header_print(headings):
-    for item in headings:
-        print("<th style=font-family:verdana;font-size:18px;>{}</th>".format(item))
+    for id, label in headings.iteritems():
+        print("<th id={} width=20% style=font-family:verdana;font-size:18px;>{}</th>".format(id, label))
 
+link = " class='arrows' src=https://cdn2.iconfinder.com/data/icons/music-player-icons-filled/46/Drop_{}-512.png"
+down_link = link.format("Down")
+up_link = link.format("Up")
 
-titles = ["Coordinator", "Coordinator Location", "Device", "Measurement", "Date/Time"]
+style = " style='width:5%; display:none;'"
+
+titles = OrderedDict()
+titles["coord"] = "Coordinator <img" + down_link + style + "' id='downcoord'><img" + up_link + style + " id='upcoord'>"
+titles["coordloc"] = "Coordinator Location <img" + down_link + style + "' id='downcoordloc'><img" + up_link + style + " id='upcoordloc'>"
+titles["dev"] = "Device <img" + down_link + style + "' id='downdev'><img" + up_link + style + " id='updev'>"
+titles["meas"] = "Measurement <img" + down_link + style + "' id='downmeas'><img" + up_link + style + " id='upmeas'>"
+titles["d_t"] =  "Date/Time <img" + down_link + style + "' id='downd_t'><img" + up_link + style + " id='upd_t'>"
+
 header_print(titles)
 
 
@@ -40,7 +53,7 @@ header_print(titles)
 # function of it's own, note that the default fill is a space.
 # This uses the string manipulation mini-language, to allow for at least some level of presentation.
 def print_row(print_line, id_tag=""):
-    print("<tr id={}>".format(id_tag))
+    print("<tr class='item' id={}>".format(id_tag))
     for item in print_line:
         print("<td>{}</td>".format(item))
     print("</tr>")
@@ -111,8 +124,36 @@ window.onload=function myFunction() {
     }}, 1000);       
 }
 
-</script>
 
+function upDown(down_arrow, up_arrow) {
+	var x = document.getElementsByClassName("arrows");
+  	for (var i = 0; i < x.length; i++) {
+    	if (x[i].id!==down_arrow && x[i].id!==up_arrow) {
+        	x[i].style.display = "none";
+    	}
+  	}
+    var down = document.getElementById(down_arrow);
+    var up = document.getElementById(up_arrow);
+    if (down.style.display === "") {
+        down.style.display = "none";
+        up.style.display = '';
+    } else {
+        down.style.display = "";
+        up.style.display = 'none';
+    }
+    
+}
+"""
+def headings_functions(heading_id, down_arrow, up_arrow, column_number):
+    return "document.getElementById('{}').addEventListener('click', function() {{upDown('{}', '{}'); w3.sortHTML('#myTable', '.item', 'td:nth-child({})')}} )".format(heading_id, down_arrow, up_arrow, column_number)
+
+print headings_functions('coord','downcoord','upcoord','1')
+print headings_functions('coordloc','downcoordloc','upcoordloc','2')
+print headings_functions('dev','downdev','updev','3')
+print headings_functions('meas','downmeas','upmeas','4')
+print headings_functions('d_t','downd_t','upd_t','5')
+print """
+</script>
 """
 
 
